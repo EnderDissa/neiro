@@ -2,6 +2,7 @@ import os
 from datetime import datetime
 from telegram import Update
 from telegram.ext import ApplicationBuilder, MessageHandler, filters, ContextTypes
+from analysis import *
 
 TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
 VIDEO_DIR = "./videos"
@@ -20,7 +21,11 @@ async def handle_video_note(update: Update, context: ContextTypes.DEFAULT_TYPE):
     file_path = os.path.join(user_dir, f"{timestamp}.mp4")
 
     await file.download_to_drive(file_path)
-    await update.message.reply_text("Видео получено и сохранено для обработки.")
+    await update.message.reply_text("Видео получено и сохранено. Начинаю анализ...")
+
+    result = await analyze_video(file_path)
+
+    await update.message.reply_text(result)
 
 def main():
     app = ApplicationBuilder().token(TOKEN).build()
