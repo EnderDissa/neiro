@@ -1,0 +1,21 @@
+[build-system]
+requires = ["setuptools>=65.0"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[project]
+name = "your_project"
+version = "0.1.0"
+dependencies = [
+    "python-telegram-bot>=20.3",
+    "opencv-python-headless>=4.9",
+    "mediapipe>=0.10",
+    "librosa>=0.10",
+    "ffmpeg-python>=0.2",
+    "python-dotenv>=1.0"
+]
+
+[project.optional-dependencies]
+dev = ["pytest", "black"]

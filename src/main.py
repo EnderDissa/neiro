@@ -2,7 +2,7 @@ import os
 from datetime import datetime
 from telegram import Update
 from telegram.ext import ApplicationBuilder, MessageHandler, filters, ContextTypes
-from analysis import *
+from src.analysis import *
 
 TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
 VIDEO_DIR = "./videos"
