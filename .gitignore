@@ -197,4 +197,4 @@ cython_debug/
 .cursorignore
 .cursorindexingignore
 videos/*
-.idea
+draft.py
