@@ -64,6 +64,7 @@ def plot_ear_histogram(ear_open, ear_blink, threshold):
 
 
 def calibrate_threshold(open_video, blink_video):
+    print(open_video,blink_video)
     ear_open, _ = extract_ear_sequence(open_video)
     ear_blink, fps = extract_ear_sequence(blink_video)
 
@@ -72,8 +73,6 @@ def calibrate_threshold(open_video, blink_video):
 
     ear_threshold = (mean_open + mean_closed) / 2.0
     print(f"[CALIBRATION] mean_open={mean_open:.3f}, mean_closed={mean_closed:.3f}, EAR_THRESHOLD={ear_threshold:.3f}")
-
-    # plot_ear_histogram(ear_open, ear_blink, ear_threshold)
 
     return ear_threshold, fps
 
