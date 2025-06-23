@@ -31,7 +31,6 @@ def extract_ear_sequence(video_path):
         if not cap.isOpened():
             raise IOError(f"Не удалось открыть видео: {video_path}")
 
-        fps = cap.get(cv2.CAP_PROP_FPS) or 30.0
         ear_values = []
 
         while True:
@@ -48,7 +47,7 @@ def extract_ear_sequence(video_path):
                 ear_r = compute_ear(pts, RIGHT_EYE_INDICES)
                 ear_values.append((ear_l + ear_r) / 2.0)
         cap.release()
-    return ear_values, fps
+    return ear_values
 
 
 def plot_ear_histogram(ear_open, ear_blink, threshold):
@@ -64,8 +63,8 @@ def plot_ear_histogram(ear_open, ear_blink, threshold):
 
 
 def calibrate_threshold(open_video, blink_video):
-    ear_open, _ = extract_ear_sequence(open_video)
-    ear_blink, fps = extract_ear_sequence(blink_video)
+    ear_open = extract_ear_sequence(open_video)
+    ear_blink = extract_ear_sequence(blink_video)
 
     mean_open = np.mean(ear_open)
     mean_closed = np.min(ear_blink)
@@ -75,10 +74,10 @@ def calibrate_threshold(open_video, blink_video):
 
     # plot_ear_histogram(ear_open, ear_blink, ear_threshold)
 
-    return ear_threshold, fps
+    return ear_threshold
 
 
-def analyze_video(video_path, ear_threshold, fps, consec_frames=2):
+def analyze_video(video_path, ear_threshold, consec_frames=2):
     mp_face = mp.solutions.face_mesh
     with mp_face.FaceMesh(
         static_image_mode=False,
@@ -88,6 +87,7 @@ def analyze_video(video_path, ear_threshold, fps, consec_frames=2):
         min_tracking_confidence=0.5
     ) as face_mesh:
         cap = cv2.VideoCapture(video_path)
+        fps = cap.get(cv2.CAP_PROP_FPS) or 30.0
         frame_count = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
         if not cap.isOpened():
             raise IOError(f"Не удалось открыть видео: {video_path}")
@@ -142,9 +142,7 @@ def analyze_video(video_path, ear_threshold, fps, consec_frames=2):
 
 if __name__ == '__main__':
     open_video = Path.cwd().parent / 'videos/open_eyes.mp4' # 5-10 секунд
-    # blink_video = Path.cwd().parent / 'videos/blink_sequence.mp4' # 5-10 раз
-    blink_video = Path.cwd().parent / 'videos/video3.mp4'
+    blink_video = Path.cwd().parent / 'videos/video3.mp4' # моргнуть 5-10 раз
 
-    # Шаг 1: Калибровка
-    EAR_THRESHOLD, fps = calibrate_threshold(open_video, blink_video)
-    analyze_video(blink_video, EAR_THRESHOLD, fps)
+    EAR_THRESHOLD = calibrate_threshold(open_video, blink_video)
+    analyze_video(blink_video, EAR_THRESHOLD)
