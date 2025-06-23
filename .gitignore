@@ -198,3 +198,4 @@ cython_debug/
 .cursorindexingignore
 videos/*
 draft.py
+src/videos/*
