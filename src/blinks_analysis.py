@@ -141,11 +141,9 @@ def analyze_video(video_path, ear_threshold, fps, consec_frames=2):
 
 if __name__ == '__main__':
     open_video = Path.cwd().parent / 'videos/open_eyes.mp4' # 5-10 секунд
-    blink_video = Path.cwd().parent / 'videos/blink_sequence.mp4' # 5-10 раз
+    # blink_video = Path.cwd().parent / 'videos/blink_sequence.mp4' # 5-10 раз
+    blink_video = Path.cwd().parent / 'videos/video3.mp4'
 
     # Шаг 1: Калибровка
     EAR_THRESHOLD, fps = calibrate_threshold(open_video, blink_video)
-
-    # Шаг 2: Анализ рабочего видео
-    work_video = Path.cwd().parent / 'videos/video.mp4'
-    analyze_video(work_video, EAR_THRESHOLD, fps)
+    analyze_video(blink_video, EAR_THRESHOLD, fps)
