@@ -88,6 +88,7 @@ def analyze_video(video_path, ear_threshold, fps, consec_frames=2):
         min_tracking_confidence=0.5
     ) as face_mesh:
         cap = cv2.VideoCapture(video_path)
+        frame_count = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
         if not cap.isOpened():
             raise IOError(f"Не удалось открыть видео: {video_path}")
 
@@ -96,7 +97,6 @@ def analyze_video(video_path, ear_threshold, fps, consec_frames=2):
         blink_start = None
         durations = []
         frame_idx = 0
-        start = time.time()
 
         while True:
             ret, frame = cap.read()
@@ -128,13 +128,14 @@ def analyze_video(video_path, ear_threshold, fps, consec_frames=2):
 
         cap.release()
 
-    total_min = (time.time() - start) / 60.0
-    blink_rate = blink_count / total_min if total_min > 0 else 0
+    duration_sec = frame_count / fps if fps > 0 else 0
+    duration_min = duration_sec / 60
+    blink_rate = blink_count / duration_min if duration_min > 0 else 0
     avg_dur = np.mean(durations) if durations else 0
 
     print(f"[ANALYSIS] Blink count: {blink_count}")
-    print(f"[ANALYSIS] Blink rate: {blink_rate:.1f} blinks/min")
-    print(f"[ANALYSIS] Avg duration: {avg_dur:.1f} ms")
+    print(f"[ANALYSIS] Blink rate: {blink_rate:.3f} blinks/min")
+    print(f"[ANALYSIS] Avg duration: {avg_dur:.3f} ms")
 
     return blink_count, blink_rate, avg_dur
 
