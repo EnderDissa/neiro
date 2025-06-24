@@ -10,7 +10,7 @@ import matplotlib.pyplot as plt
 LEFT_EYE_INDICES   = [33, 160, 158, 133, 153, 144]
 RIGHT_EYE_INDICES  = [263, 385, 387, 362, 380, 373]
 
-async def compute_ear(landmarks, eye_idxs):
+def compute_ear(landmarks, eye_idxs):
     pts = np.array([landmarks[i] for i in eye_idxs])
     A = np.linalg.norm(pts[1] - pts[5])
     B = np.linalg.norm(pts[2] - pts[4])
@@ -18,7 +18,7 @@ async def compute_ear(landmarks, eye_idxs):
     return (A + B) / (2.0 * C)
 
 
-async def extract_ear_sequence(video_path):
+def extract_ear_sequence(video_path):
     mp_face = mp.solutions.face_mesh
     with mp_face.FaceMesh(
         static_image_mode=False,
@@ -51,7 +51,7 @@ async def extract_ear_sequence(video_path):
     return ear_values, fps
 
 
-async def plot_ear_histogram(ear_open, ear_blink, threshold):
+def plot_ear_histogram(ear_open, ear_blink, threshold):
     plt.figure(figsize=(8,4))
     plt.hist(ear_open, bins=50, alpha=0.6, label='Open')
     plt.hist(ear_blink, bins=50, alpha=0.6, label='Blink')
@@ -63,7 +63,7 @@ async def plot_ear_histogram(ear_open, ear_blink, threshold):
     plt.show()
 
 
-async def calibrate_threshold(open_video, blink_video):
+def calibrate_threshold(open_video, blink_video):
     print(open_video,blink_video)
     ear_open, _ = extract_ear_sequence(open_video)
     ear_blink, fps = extract_ear_sequence(blink_video)
@@ -77,7 +77,7 @@ async def calibrate_threshold(open_video, blink_video):
     return ear_threshold, fps
 
 
-async def analyze_video(video_path, ear_threshold, fps, consec_frames=2):
+def analyze_video(video_path, ear_threshold, fps, consec_frames=2):
     mp_face = mp.solutions.face_mesh
     with mp_face.FaceMesh(
         static_image_mode=False,

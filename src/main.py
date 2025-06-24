@@ -7,6 +7,10 @@ from telegram.ext import ApplicationBuilder, MessageHandler, filters, ContextTyp
 from src.blinks_analysis import *
 from src.analysis import *
 
+# from dotenv import load_dotenv
+#
+# load_dotenv()
+
 TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
 VIDEO_DIR = Path.cwd() / "videos"
 
