@@ -49,10 +49,11 @@ async def handle_video_note(update: Update, context: ContextTypes.DEFAULT_TYPE):
             }
             with open(calibration_file, 'w+') as f:
                 json.dump(calibration_data, f, indent=4)
-            await update.message.reply_text(f"Первый этап калибровки завершён. Отправь мне ещё один кружок: нужно поморгать 5-10 раз")
+            await update.message.reply_text(f"Первый этап калибровки завершён. Отправьте мне ещё один кружок: нужно поморгать 5-10 раз")
         else:
             file_path = os.path.join(user_dir, "calibration_blink.mp4")
             print(file_path)
+            await update.message.reply_text(f"Ожидайте. Финальный этап калибровки займёт некоторое время.")
 
 
             with open(calibration_file, 'r') as f:
@@ -61,6 +62,7 @@ async def handle_video_note(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
             await file.download_to_drive(file_path)
             ear_threshold, fps = calibrate_threshold(os.path.join(user_dir, f"calibration_open.mp4"), os.path.join(user_dir, f"calibration_blink.mp4"))
+            calibration_data['EAR_THRESHOLD'] = ear_threshold
             blink_count, blink_rate, avg_dur = analyze_video(file_path, ear_threshold, fps)
             calibration_data['second_video'] = file_path
             calibration_data['blink_count'] = blink_count
@@ -101,7 +103,6 @@ async def recalibrate(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 def main():
     app = ApplicationBuilder().token(TOKEN).build()
-
     app.add_handler(MessageHandler(filters.VIDEO_NOTE, handle_video_note))
 
 
