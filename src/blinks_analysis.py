@@ -78,7 +78,7 @@ def calibrate_threshold(open_video, blink_video):
     return ear_threshold, fps
 
 
-def analyze_video(video_path, ear_threshold, fps, consec_frames=2):
+def calibrate_video(video_path, ear_threshold, fps, consec_frames=2):
     mp_face = mp.solutions.face_mesh
     with mp_face.FaceMesh(
         static_image_mode=False,
@@ -139,6 +139,24 @@ def analyze_video(video_path, ear_threshold, fps, consec_frames=2):
 
     return blink_count, blink_rate, avg_dur
 
+def analyze_video(video_path, consec_frames=2):
+    user_path = video_path[:video_path.rfind('\\') + 1]
+    audio_path = video_path.replace('.mp4', '.wav')
+    calibration_file = f"{user_path}calibration_data.json"
+    with open(calibration_file, 'r') as f:
+        calibration_data = json.load(f)
+
+
+    ear_threshold = calibration_data['EAR_THRESHOLD']
+    blink_count = calibration_data['blink_count']
+    blink_rate = calibration_data['blink_rate']
+    avg_dur = calibration_data['avg_dur']
+
+    return f"Анализ пока невозможен."
+
+
+    #     return f"Анализ завершен. Морганий обнаружено: {blink_count}. Средние MFCC аудио: {mfcc_mean[:3]}"
+
 
 if __name__ == '__main__':
     open_video = Path.cwd().parent / 'videos/open_eyes.mp4' # 5-10 секунд
@@ -147,4 +165,4 @@ if __name__ == '__main__':
 
     # Шаг 1: Калибровка
     EAR_THRESHOLD, fps = calibrate_threshold(open_video, blink_video)
-    analyze_video(blink_video, EAR_THRESHOLD, fps)
+    calibrate_video(blink_video, EAR_THRESHOLD, fps)
