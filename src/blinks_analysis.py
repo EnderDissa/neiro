@@ -78,7 +78,7 @@ def calibrate_threshold(open_video, blink_video):
     return ear_threshold, fps
 
 
-def calibrate_video(video_path, ear_threshold, fps, consec_frames=2):
+def analyze_video(video_path, ear_threshold, fps, consec_frames=2):
     mp_face = mp.solutions.face_mesh
     with mp_face.FaceMesh(
         static_image_mode=False,
@@ -119,8 +119,9 @@ def calibrate_video(video_path, ear_threshold, fps, consec_frames=2):
                     if blink_start is not None:
                         frames = frame_idx - blink_start
                         duration_ms = frames * (1000.0 / fps)
-                        durations.append(duration_ms)
-                        blink_count += 1
+                        if duration_ms > 50:
+                            durations.append(duration_ms)
+                            blink_count += 1
                         print(f"[BLINK] #{blink_count}: duration {duration_ms:.1f} ms")
                     consec = 0
                     blink_start = None
@@ -139,23 +140,23 @@ def calibrate_video(video_path, ear_threshold, fps, consec_frames=2):
 
     return blink_count, blink_rate, avg_dur
 
-def analyze_video(video_path, consec_frames=2):
-    user_path = video_path[:video_path.rfind('\\') + 1]
-    audio_path = video_path.replace('.mp4', '.wav')
-    calibration_file = f"{user_path}calibration_data.json"
-    with open(calibration_file, 'r') as f:
-        calibration_data = json.load(f)
-
-
-    ear_threshold = calibration_data['EAR_THRESHOLD']
-    blink_count = calibration_data['blink_count']
-    blink_rate = calibration_data['blink_rate']
-    avg_dur = calibration_data['avg_dur']
-
-    return f"Анализ пока невозможен."
-
-
-    #     return f"Анализ завершен. Морганий обнаружено: {blink_count}. Средние MFCC аудио: {mfcc_mean[:3]}"
+# def analyze_video(video_path, consec_frames=2):
+#     user_path = video_path[:video_path.rfind('\\') + 1]
+#     audio_path = video_path.replace('.mp4', '.wav')
+#     calibration_file = f"{user_path}calibration_data.json"
+#     with open(calibration_file, 'r') as f:
+#         calibration_data = json.load(f)
+#
+#
+#     ear_threshold = calibration_data['EAR_THRESHOLD']
+#     blink_count = calibration_data['blink_count']
+#     blink_rate = calibration_data['blink_rate']
+#     avg_dur = calibration_data['avg_dur']
+#
+#     return f"Анализ пока невозможен."
+#
+#
+#     #     return f"Анализ завершен. Морганий обнаружено: {blink_count}. Средние MFCC аудио: {mfcc_mean[:3]}"
 
 
 if __name__ == '__main__':

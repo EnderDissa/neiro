@@ -9,15 +9,25 @@ from src.blinks_analysis import *
 from src.analysis import *
 import telebot
 
+from dotenv import load_dotenv
 
-
-# from dotenv import load_dotenv
-#
-# load_dotenv()
+load_dotenv()
 
 TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
 VIDEO_DIR = Path.cwd() / "videos"
 bot = telebot.TeleBot(TOKEN)
+
+def load_user_calibration(user_id: int):
+    calibration_file = VIDEO_DIR / str(user_id) / "calibration_data.json"
+    if not calibration_file.exists():
+        raise FileNotFoundError("Пользователь не прошёл калибровку")
+    with open(calibration_file, "r") as f:
+        data = json.load(f)
+    threshold = data.get("EAR_THRESHOLD")
+    fps = data.get("FPS")
+    if threshold is None:
+        raise KeyError("В calibration_data.json нет поля EAR_THRESHOLD")
+    return threshold, fps
 
 def needs_calibration(user_id: int) -> int:
     calibration_file = f"videos/{user_id}/calibration_data.json"
@@ -52,7 +62,8 @@ def handle_video_note(message):
                 'EAR_THRESHOLD': 0,
                 'blink_count': 0,
                 'blink_rate': 0,
-                'avg_dur': 0
+                'avg_dur': 0,
+                'FPS' : 0
             }
             with open(calibration_file, 'w+') as f:
                 json.dump(calibration_data, f, indent=4)
@@ -72,11 +83,12 @@ def handle_video_note(message):
                 f.write(downloaded_bytes)
             ear_threshold, fps = calibrate_threshold(os.path.join(user_dir, f"calibration_open.mp4"), os.path.join(user_dir, f"calibration_blink.mp4"))
             calibration_data['EAR_THRESHOLD'] = ear_threshold
-            blink_count, blink_rate, avg_dur = calibrate_video(file_path, ear_threshold, fps)
+            blink_count, blink_rate, avg_dur = analyze_video(file_path, ear_threshold, fps)
             calibration_data['second_video'] = file_path
             calibration_data['blink_count'] = blink_count
             calibration_data['blink_rate'] = blink_rate
             calibration_data['avg_dur'] = avg_dur
+            calibration_data['FPS'] = fps
             with open(calibration_file, 'w+') as f:
                 json.dump(calibration_data, f, indent=4)
             bot.send_message(message.chat.id,f"Калибровка успешна. Теперь вы можете отправлять видео для проверки")
@@ -98,9 +110,10 @@ def handle_video_note(message):
 
     bot.send_message(message.chat.id,"Видео получено и сохранено. Начинаю анализ...")
 
-    result = analyze_video(file_path)
+    ear_threshold, fps = load_user_calibration(user_id)
+    blink_count, blink_rate, avg_dur = analyze_video(file_path, ear_threshold, fps)
 
-    bot.send_message(message.chat.id,result)
+    bot.send_message(message.chat.id,f"Полученные результаты:\n blink_count = {blink_count} \n blink_rate = {blink_rate} \n avg_dur = {avg_dur}")
 
 @bot.message_handler(commands=['recalibrate'])
 def recalibrate(message):
