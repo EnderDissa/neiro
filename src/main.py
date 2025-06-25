@@ -11,6 +11,9 @@ import telebot
 
 from dotenv import load_dotenv
 
+from src.fatigue_calc import calculate_fatigue
+from src.sound_analysis import analyze_audio
+
 load_dotenv()
 
 TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
@@ -60,14 +63,20 @@ def handle_video_note(message):
                 'first_video': file_path,
                 'second_video': "None",
                 'EAR_THRESHOLD': 0,
-                'blink_count': 0,
                 'blink_rate': 0,
                 'avg_dur': 0,
-                'FPS' : 0
+                'FPS' : 0,
+                'spectral_centroid_mean': 0,
+                'spectral_flux_mean': 0,
+                'rms_db_mean': 0,
+                'f0_mean_hz': 0,
+                'jitter_percent': 0,
+                'shimmer_db': 0,
+                'speech_rate_wpm': 0
             }
             with open(calibration_file, 'w+') as f:
                 json.dump(calibration_data, f, indent=4)
-            bot.send_message(message.chat.id,f"Первый этап калибровки завершён. Отправьте мне ещё один кружок: нужно поморгать 5-10 раз")
+            bot.send_message(message.chat.id,f"Первый этап калибровки завершён. Отправьте мне ещё один кружок: проговорите текст на протяжении 15-20 секунд")
         else:
             file_path = os.path.join(user_dir, "calibration_blink.mp4")
             print(file_path)
@@ -85,10 +94,18 @@ def handle_video_note(message):
             calibration_data['EAR_THRESHOLD'] = ear_threshold
             blink_count, blink_rate, avg_dur = analyze_video(file_path, ear_threshold, fps)
             calibration_data['second_video'] = file_path
-            calibration_data['blink_count'] = blink_count
+            # calibration_data['blink_count'] = blink_count
             calibration_data['blink_rate'] = blink_rate
             calibration_data['avg_dur'] = avg_dur
             calibration_data['FPS'] = fps
+            features = analyze_audio(os.path.join(user_dir, f"calibration_blink.mp4"))
+            calibration_data['spectral_centroid_mean'] = features['spectral_centroid_mean']
+            calibration_data['spectral_flux_mean'] = features['spectral_flux_mean']
+            calibration_data['rms_db_mean'] = features['rms_db_mean']
+            calibration_data['f0_mean_hz'] = features['f0_mean_hz']
+            calibration_data['jitter_percent'] = features['jitter_percent']
+            calibration_data['shimmer_db'] = features['shimmer_db']
+            calibration_data['speech_rate_wpm'] = features['speech_rate_wpm']
             with open(calibration_file, 'w+') as f:
                 json.dump(calibration_data, f, indent=4)
             bot.send_message(message.chat.id,f"Калибровка успешна. Теперь вы можете отправлять видео для проверки")
@@ -112,8 +129,58 @@ def handle_video_note(message):
 
     ear_threshold, fps = load_user_calibration(user_id)
     blink_count, blink_rate, avg_dur = analyze_video(file_path, ear_threshold, fps)
+    features = analyze_audio(file_path)
+    bot.send_message(
+        message.chat.id,
+        f"Полученные результаты:\n"
+        f"Видеоанализ:\n"
+        f"blink_rate = {blink_rate}\n"
+        f"avg_dur = {avg_dur}\n\n"
+        f"Аудиоанализ:\n"
+        f"spectral_centroid_mean = {features['spectral_centroid_mean']}\n"
+        f"spectral_flux_mean = {features['spectral_flux_mean']}\n"
+        f"rms_db_mean = {features['rms_db_mean']}\n"
+        f"f0_mean_hz = {features['f0_mean_hz']}\n"
+        f"jitter_percent = {features['jitter_percent']}\n"
+        f"shimmer_db = {features['shimmer_db']}\n"
+        f"speech_rate_wpm = {features['speech_rate_wpm']}"
+    )
+    print('Вычисление усталости, где 1 - полная усталость')
 
-    bot.send_message(message.chat.id,f"Полученные результаты:\n blink_count = {blink_count} \n blink_rate = {blink_rate} \n avg_dur = {avg_dur}")
+    calibration_file = os.path.join(VIDEO_DIR, str(user_id), "calibration_data.json")
+    with open(calibration_file, 'r') as f:
+        calibration_json = json.load(f)
+
+    calibration = {
+        'blink_rate': calibration_json['blink_rate'],
+        'avg_dur': calibration_json['avg_dur'],
+        'FPS': calibration_json['FPS'],
+        'spectral_centroid_mean': calibration_json['spectral_centroid_mean'],
+        'spectral_flux_mean': calibration_json['spectral_flux_mean'],
+        'rms_db_mean': calibration_json['rms_db_mean'],
+        'f0_mean_hz': calibration_json['f0_mean_hz'],
+        'jitter_percent': calibration_json['jitter_percent'],
+        'shimmer_db': calibration_json['shimmer_db'],
+        'speech_rate_wpm': calibration_json['speech_rate_wpm']
+    }
+
+    current = {
+        'blink_rate': blink_rate,
+        'avg_dur': avg_dur,
+        'FPS': fps,
+        'spectral_centroid_mean': features['spectral_centroid_mean'],
+        'spectral_flux_mean': features['spectral_flux_mean'],
+        'rms_db_mean': features['rms_db_mean'],
+        'f0_mean_hz': features['f0_mean_hz'],
+        'jitter_percent': features['jitter_percent'],
+        'shimmer_db': features['shimmer_db'],
+        'speech_rate_wpm': features['speech_rate_wpm']
+    }
+
+    # print(f"Ваша степень усталости - {calculate_fatigue(calibration, current)}")
+    bot.send_message(message.chat.id,f"Ваша степень усталости - {calculate_fatigue(calibration, current)}")
+
+    # bot.send_message(message.chat.id,f"Полученные результаты:\n blink_count = {blink_count} \n blink_rate = {blink_rate} \n avg_dur = {avg_dur}")
 
 @bot.message_handler(commands=['recalibrate'])
 def recalibrate(message):

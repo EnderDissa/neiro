@@ -166,4 +166,4 @@ if __name__ == '__main__':
 
     # Шаг 1: Калибровка
     EAR_THRESHOLD, fps = calibrate_threshold(open_video, blink_video)
-    calibrate_video(blink_video, EAR_THRESHOLD, fps)
+    analyze_video(blink_video, EAR_THRESHOLD, fps)
