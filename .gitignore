@@ -2,6 +2,7 @@
 __pycache__/
 *.py[cod]
 *$py.class
+*.pyc
 
 # C extensions
 *.so
@@ -127,6 +128,9 @@ celerybeat.pid
 # SageMath parsed files
 *.sage.py
 
+#System files
+.DS_Store
+
 # Environments
 .env
 .venv
@@ -193,3 +197,5 @@ cython_debug/
 .cursorignore
 .cursorindexingignore
 videos/*
+draft.py
+src/videos/*
