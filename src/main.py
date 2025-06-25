@@ -11,7 +11,7 @@ import telebot
 
 from dotenv import load_dotenv
 
-from src.fatigue_calc import calculate_fatigue
+from src.fatigue_calc import *
 from src.sound_analysis import analyze_audio
 
 load_dotenv()
@@ -38,9 +38,35 @@ def needs_calibration(user_id: int) -> int:
         return 0
     with open(calibration_file, 'r') as f:
         calibration_data = json.load(f)
-        if calibration_data['first_video']=="None": return 0
+        if calibration_data['first_video']=="None" or calibration_data['KSS_baseline']==0: return 0
         if calibration_data['second_video']=="None": return 1
         return 2
+
+@bot.message_handler(func=lambda message: message.text.isdigit() and 1 <= int(message.text) <= 9)
+def handle_kss_input(message):
+    user_id = message.from_user.id
+    user_dir = os.path.join(VIDEO_DIR, str(user_id))
+    calibration_file = os.path.join(user_dir, "calibration_data.json")
+
+    if not os.path.exists(calibration_file):
+        bot.send_message(message.chat.id, "Вы ещё не начали калибровку. Отправьте сначала первое видео.")
+        return
+
+    with open(calibration_file, 'r') as f:
+        calibration_data = json.load(f)
+
+    if calibration_data.get('KSS_baseline') is not None:
+        bot.send_message(message.chat.id, "Вы уже указали оценку KSS. Теперь отправьте второе калибровочное видео.")
+        return
+
+    calibration_data['KSS_baseline'] = int(message.text)
+
+    with open(calibration_file, 'w') as f:
+        json.dump(calibration_data, f, indent=4)
+
+    bot.send_message(message.chat.id,
+        f"Спасибо! Ваша оценка по KSS ({message.text}) сохранена. "
+        "Теперь отправьте второе калибровочное видео: проговорите текст на протяжении 15-20 секунд.")
 
 @bot.message_handler(content_types=['video_note'])
 def handle_video_note(message):
@@ -62,6 +88,7 @@ def handle_video_note(message):
             calibration_data = {
                 'first_video': file_path,
                 'second_video': "None",
+                'KSS_baseline': 0,
                 'EAR_THRESHOLD': 0,
                 'blink_rate': 0,
                 'avg_dur': 0,
@@ -76,7 +103,13 @@ def handle_video_note(message):
             }
             with open(calibration_file, 'w+') as f:
                 json.dump(calibration_data, f, indent=4)
-            bot.send_message(message.chat.id,f"Первый этап калибровки завершён. Отправьте мне ещё один кружок: проговорите текст на протяжении 15-20 секунд")
+            bot.send_message(
+                message.chat.id,
+                "Первый этап калибровки завершён. Теперь отправьте мне сообщение с числом от 1 до 9, "
+                "соответствующим вашему текущему состоянию по шкале Karolinska Sleepiness Scale "
+                "(1 — очень бодр, 9 — очень сонлив)."
+            )
+            #bot.send_message(message.chat.id,f"Первый этап калибровки завершён. Отправьте мне ещё один кружок: проговорите текст на протяжении 15-20 секунд")
         else:
             file_path = os.path.join(user_dir, "calibration_blink.mp4")
             print(file_path)
@@ -130,9 +163,7 @@ def handle_video_note(message):
     ear_threshold, fps = load_user_calibration(user_id)
     blink_count, blink_rate, avg_dur = analyze_video(file_path, ear_threshold, fps)
     features = analyze_audio(file_path)
-    bot.send_message(
-        message.chat.id,
-        f"Полученные результаты:\n"
+    tts = (f"Полученные результаты:\n"
         f"Видеоанализ:\n"
         f"blink_rate = {blink_rate}\n"
         f"avg_dur = {avg_dur}\n\n"
@@ -143,9 +174,10 @@ def handle_video_note(message):
         f"f0_mean_hz = {features['f0_mean_hz']}\n"
         f"jitter_percent = {features['jitter_percent']}\n"
         f"shimmer_db = {features['shimmer_db']}\n"
-        f"speech_rate_wpm = {features['speech_rate_wpm']}"
-    )
-    print('Вычисление усталости, где 1 - полная усталость')
+        f"speech_rate_wpm = {features['speech_rate_wpm']}")
+    #bot.send_message(message.chat.id,tts)
+
+    print('Вычисление усталости, где 1 - абсолютная усталость')
 
     calibration_file = os.path.join(VIDEO_DIR, str(user_id), "calibration_data.json")
     with open(calibration_file, 'r') as f:
@@ -178,7 +210,26 @@ def handle_video_note(message):
     }
 
     # print(f"Ваша степень усталости - {calculate_fatigue(calibration, current)}")
-    bot.send_message(message.chat.id,f"Ваша степень усталости - {calculate_fatigue(calibration, current)}")
+    fatigue = calculate_fatigue(calibration, current)
+    absolute_kss = fatigue_to_absolute_kss(fatigue, calibration_json['KSS_baseline'])
+
+    kss_descriptions = {
+        1: "Очень бодр и внимателен",
+        2: "Хорошо бодр и внимателен",
+        3: "Бодр, но не в полной мере",
+        4: "Скорее бодр, чем сонлив",
+        5: "Ни бодр, ни сонлив",
+        6: "Некоторая сонливость",
+        7: "Сонлив, но без усилий остаюсь бодрым",
+        8: "Сонлив, прилагаю усилия, чтобы не заснуть",
+        9: "Очень сонлив, большие усилия, чтобы не заснуть"
+    }
+
+    bot.send_message(
+        message.chat.id,
+        f"Ваша степень усталости по шкале KSS: {absolute_kss}/9 — {kss_descriptions[absolute_kss]}.\n"
+        f"(Относительный fatigue_score: {fatigue:.2f})"
+    )
 
     # bot.send_message(message.chat.id,f"Полученные результаты:\n blink_count = {blink_count} \n blink_rate = {blink_rate} \n avg_dur = {avg_dur}")
 

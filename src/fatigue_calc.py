@@ -1,7 +1,6 @@
 import numpy as np
 
 def calculate_fatigue(calibration, current):
-    # Weights and directions
     params = {
         'blink_rate': {'weight': 0.15, 'direction': 1},
         'avg_dur': {'weight': 0.20, 'direction': 1},
@@ -14,15 +13,23 @@ def calculate_fatigue(calibration, current):
         'speech_rate_wpm': {'weight': 0.15, 'direction': -1}
     }
 
-    # Calculate fatigue contributions
     fatigue_score = 0
     contributions = {}
     for param, info in params.items():
         diff = current[param] - calibration[param]
-        contribution = max(info['direction'] * diff, 0) / abs(calibration[param])
+        contribution = (info['direction'] * diff) / abs(calibration[param])
         contributions[param] = contribution
         fatigue_score += info['weight'] * contribution
 
     fatigue_score = min(1, max(0, fatigue_score))
 
     return fatigue_score
+
+def fatigue_to_absolute_kss(fatigue_score, kss_baseline):
+
+    kss_change = fatigue_score * 4
+    absolute_kss = kss_baseline + kss_change
+
+    absolute_kss = round(min(max(1, absolute_kss), 9))
+
+    return absolute_kss
