@@ -6,7 +6,6 @@ from datetime import datetime
 # from telegram.error import TimedOut
 # from telegram.ext import ApplicationBuilder, MessageHandler, filters, ContextTypes, CommandHandler
 from src.blinks_analysis import *
-from src.analysis import *
 import telebot
 
 from dotenv import load_dotenv
@@ -55,7 +54,7 @@ def handle_kss_input(message):
     with open(calibration_file, 'r') as f:
         calibration_data = json.load(f)
 
-    if calibration_data.get('KSS_baseline') is not None:
+    if calibration_data.get('KSS_baseline') is not 0:
         bot.send_message(message.chat.id, "Вы уже указали оценку KSS. Теперь отправьте второе калибровочное видео.")
         return
 

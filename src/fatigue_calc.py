@@ -21,7 +21,6 @@ def calculate_fatigue(calibration, current):
         contributions[param] = contribution
         fatigue_score += info['weight'] * contribution
 
-    fatigue_score = min(1, max(0, fatigue_score))
 
     return fatigue_score
 
